@@ -4,14 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -213,29 +216,33 @@ func pirLWE128(db *database.LWE128, nRepeat int) []*Chunk {
 	for j := 0; j < nRepeat; j++ {
 		log.Printf("start repetition %d out of %d", j+1, nRepeat)
 		results[j] = initChunk(numRetrievedBlocks)
+		logPerformanceMetrics("lwe128", fmt.Sprintf("Start of repitition %d", j+1))
 
-		// store digest size
-		results[j].Digest = db.Auth.DigestLWE128.BytesSize()
+		measureExecutionTime("lwe128", func() {
+			// store digest size
+			results[j].Digest = db.Auth.DigestLWE128.BytesSize()
 
-		// pick a random block index to start the retrieval
-		ii := rand.Intn(db.NumRows)
-		jj := rand.Intn(db.NumColumns)
-		results[j].CPU[0] = initBlock(1)
-		results[j].Bandwidth[0] = initBlock(1)
+			// pick a random block index to start the retrieval
+			ii := rand.Intn(db.NumRows)
+			jj := rand.Intn(db.NumColumns)
+			results[j].CPU[0] = initBlock(1)
+			results[j].Bandwidth[0] = initBlock(1)
 
-		t := time.Now()
+			t := time.Now()
 
-		query := c.Query(ii, jj)
-		answer := s.Answer(query)
-		if _, err := c.Reconstruct(answer); err != nil {
-			log.Fatal(err)
-		}
+			query := c.Query(ii, jj)
+			answer := s.Answer(query)
+			if _, err := c.Reconstruct(answer); err != nil {
+				log.Fatal(err)
+			}
 
-		// store eval results
-		results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
-		results[j].Bandwidth[0].Query = query.BytesSize()
-		results[j].Bandwidth[0].Answers[0] = answer.BytesSize()
+			// store eval results
+			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
+			results[j].Bandwidth[0].Query = query.BytesSize()
+			results[j].Bandwidth[0].Answers[0] = answer.BytesSize()
+		})
 
+		logPerformanceMetrics("lwe128", fmt.Sprintf("End of repitition %d", j+1))
 		// GC after each repetition
 		runtime.GC()
 		time.Sleep(2)
@@ -256,26 +263,31 @@ func pirLWE(db *database.LWE, nRepeat, tECC int) []*Chunk {
 	for j := 0; j < nRepeat; j++ {
 		log.Printf("start repetition %d out of %d", j+1, nRepeat)
 		results[j] = initChunk(numRetrievedBlocks)
+		logPerformanceMetrics("lwe", fmt.Sprintf("Start of repition %d", j+1))
 
-		// store digest size
-		results[j].Digest = db.Auth.DigestLWE.BytesSize()
-		// pick a random block index to start the retrieval
-		ii := rand.Intn(db.NumRows)
-		jj := rand.Intn(db.NumColumns)
-		results[j].CPU[0] = initBlock(1)
-		results[j].Bandwidth[0] = initBlock(1)
+		measureExecutionTime("lwe", func() {
+			// store digest size
+			results[j].Digest = db.Auth.DigestLWE.BytesSize()
+			// pick a random block index to start the retrieval
+			ii := rand.Intn(db.NumRows)
+			jj := rand.Intn(db.NumColumns)
+			results[j].CPU[0] = initBlock(1)
+			results[j].Bandwidth[0] = initBlock(1)
 
-		t := time.Now()
+			t := time.Now()
 
-		query := c.Query(ii, jj)
-		answer := s.Answer(query)
-		if _, err := c.Reconstruct(answer); err != nil {
-			log.Fatal(err)
-		}
+			query := c.Query(ii, jj)
+			answer := s.Answer(query)
+			if _, err := c.Reconstruct(answer); err != nil {
+				log.Fatal(err)
+			}
+			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
+			results[j].Bandwidth[0].Query = query[0].BytesSize() * float64(len(query))        // all matrices equal
+			results[j].Bandwidth[0].Answers[0] = float64(len(answer)) * answer[0].BytesSize() // all matrices equal
 
-		results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
-		results[j].Bandwidth[0].Query = query[0].BytesSize() * float64(len(query))        // all matrices equal
-		results[j].Bandwidth[0].Answers[0] = float64(len(answer)) * answer[0].BytesSize() // all matrices equal
+		})
+
+		logPerformanceMetrics("lwe", fmt.Sprintf("End of repition %d", j+1))
 
 		// GC after each repetition
 		runtime.GC()
@@ -295,42 +307,50 @@ func pirElliptic(db *database.Elliptic, nRepeat int) []*Chunk {
 
 	for j := 0; j < nRepeat; j++ {
 		log.Printf("start repetition %d out of %d", j+1, nRepeat)
-		results[j] = initChunk(numRetrievedBlocks)
 
-		// store digest size
-		results[j].Digest = float64(len(db.SubDigests)) + float64(len(db.Digest))
+		// Messung vor der Wiederholung
+		logPerformanceMetrics("elliptic", fmt.Sprintf("Start of repition %d", j+1))
 
-		// pick a random block index to start the retrieval
-		index := rand.Intn(db.NumRows * db.NumColumns)
-		results[j].CPU[0] = initBlock(1)
-		results[j].Bandwidth[0] = initBlock(1)
+		// Zeitmessung starten
+		measureExecutionTime("elliptic", func() {
+			results[j] = initChunk(numRetrievedBlocks)
 
-		//m.Reset()
-		t := time.Now()
-		query, err := c.QueryBytes(index)
-		if err != nil {
-			log.Fatal(err)
-		}
-		//results[j].CPU[0].Query = m.RecordAndReset()
-		results[j].CPU[0].Query = 0
-		results[j].Bandwidth[0].Query += float64(len(query))
+			// store digest size
+			results[j].Digest = float64(len(db.SubDigests)) + float64(len(db.Digest))
 
-		// get server's answer
-		answer, err := s.AnswerBytes(query)
-		if err != nil {
-			log.Fatal(err)
-		}
-		//results[j].CPU[0].Answers[0] = m.RecordAndReset()
-		results[j].CPU[0].Answers[0] = 0
-		results[j].Bandwidth[0].Answers[0] = float64(len(answer))
+			// pick a random block index to start the retrieval
+			index := rand.Intn(db.NumRows * db.NumColumns)
+			results[j].CPU[0] = initBlock(1)
+			results[j].Bandwidth[0] = initBlock(1)
 
-		_, err = c.ReconstructBytes(answer)
-		if err != nil {
-			log.Fatal(err)
-		}
-		results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
-		results[j].Bandwidth[0].Reconstruct = 0
+			//m.Reset()
+			t := time.Now()
+			query, err := c.QueryBytes(index)
+			if err != nil {
+				log.Fatal(err)
+			}
+			//results[j].CPU[0].Query = m.RecordAndReset()
+			results[j].CPU[0].Query = 0
+			results[j].Bandwidth[0].Query += float64(len(query))
 
+			// get server's answer
+			answer, err := s.AnswerBytes(query)
+			if err != nil {
+				log.Fatal(err)
+			}
+			//results[j].CPU[0].Answers[0] = m.RecordAndReset()
+			results[j].CPU[0].Answers[0] = 0
+			results[j].Bandwidth[0].Answers[0] = float64(len(answer))
+
+			_, err = c.ReconstructBytes(answer)
+			if err != nil {
+				log.Fatal(err)
+			}
+			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
+			results[j].Bandwidth[0].Reconstruct = 0
+
+		})
+		logPerformanceMetrics("elliptic", fmt.Sprintf("End of repition %d", j+1))
 		// GC after each repetition
 		runtime.GC()
 		time.Sleep(2)
@@ -384,4 +404,56 @@ func (s *Simulation) validSimulation() bool {
 		s.Primitive == "cmp-vpir-lwe" ||
 		s.Primitive == "cmp-vpir-lwe-128" ||
 		s.Primitive == "preprocessing"
+}
+
+func logPerformanceMetrics(algoName string, step string) {
+	// Öffne Textdateien für das Speichern der Daten
+	cpuFile, err := os.OpenFile(fmt.Sprintf("%s_cpu_usage.txt", algoName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("Could not open CPU usage file: %v", err)
+	}
+	defer cpuFile.Close()
+
+	ramFile, err := os.OpenFile(fmt.Sprintf("%s_ram_usage.txt", algoName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("Could not open RAM usage file: %v", err)
+	}
+	defer ramFile.Close()
+
+	// CPU-Auslastung messen
+	var numGoroutines = getCPUUsage()
+
+	// RAM-Auslastung messen
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	ramUsage := memStats.Alloc / 1024 / 1024 // In MB
+
+	// Ergebnisse speichern
+	fmt.Fprintf(cpuFile, "%s: Goroutines: %d\n", step, numGoroutines)
+	fmt.Fprintf(ramFile, "%s: RAM Usage: %d MB\n", step, ramUsage)
+}
+
+func measureExecutionTime(algoName string, fn func()) {
+	// Öffne Datei für Ausführungszeit
+	timeFile, err := os.OpenFile(fmt.Sprintf("%s_execution_time.txt", algoName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("Could not open execution time file: %v", err)
+	}
+	defer timeFile.Close()
+
+	// Ausführungszeit messen
+	start := time.Now()
+	fn()
+	elapsed := time.Since(start)
+
+	// Ergebnisse speichern
+	fmt.Fprintf(timeFile, "Execution Time: %s\n", elapsed)
+}
+
+func getCPUUsage() string {
+	out, err := exec.Command("bash", "-c", "top -b -d 1 -n 5 | grep 'Cpu(s)'").Output()
+	if err != nil {
+		return "Error measuring CPU usage"
+	}
+	return strings.TrimSpace(string(out))
 }

@@ -58,7 +58,7 @@ func RandomMerkleDB(rnd io.Reader, dbLen, numRows, blockLen, nRepeat int) []*Chu
 			blockLens[b] = blockLen
 		}
 
-		_ = generateMerkleProofs(blocks, tree, blockLen)
+		_ = generateMerkleProofsParallel(blocks, tree, blockLen)
 
 		results[j].CPU[0].Answers[0] = m.RecordAndReset()
 
@@ -86,6 +86,42 @@ func generateMerkleProofs(data [][]byte, t *merkle.MerkleTree, blockLen int) []b
 		// copying the data block and encoded proof into output
 		result = append(result, append(data[b], encodedProof...)...)
 	}
+
+	return result
+}
+
+func generateMerkleProofsParallel(data [][]byte, t *merkle.MerkleTree, blockLen int) []byte {
+	result := make([]byte, 0, blockLen*len(data))
+	numWorkers := runtime.NumCPU()
+	workChan := make(chan int, len(data))
+	resultChan := make(chan []byte, len(data))
+
+	worker := func() {
+		for b := range workChan {
+			p, err := t.GenerateProof(data[b])
+			if err != nil {
+				log.Fatalf("error while generating proof for block %v: %v", b, err)
+			}
+			encodedProof := merkle.EncodeProof(p)
+			encodedProof = database.PadWithSignalByte(encodedProof)
+			blockWithProof := append(data[b], encodedProof...)
+			resultChan <- blockWithProof
+		}
+	}
+
+	for i := 0; i < numWorkers; i++ {
+		go worker()
+	}
+
+	for i := range data {
+		workChan <- i
+	}
+	close(workChan)
+
+	for i := 0; i < len(data); i++ {
+		result = append(result, <-resultChan...)
+	}
+	close(resultChan)
 
 	return result
 }

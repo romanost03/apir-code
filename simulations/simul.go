@@ -157,17 +157,19 @@ func main() {
 		switch s.Primitive {
 		case "cmp-vpir-dh":
 			log.Printf("db info: %#v", dbElliptic.Info)
-			results = pirElliptic(dbElliptic, s.Repetitions)
+			// results = pirElliptic(dbElliptic, s.Repetitions)
+			results = pirEllipticParallel(dbElliptic, s.Repetitions)
 		case "cmp-vpir-lwe": // LWE uses Amplify
 			log.Printf("db info: %#v", dbLWE.Info)
 			rep, ok := tECC[dbLen]
 			if !ok {
 				panic("tECC not defined for this db length")
 			}
-			results = pirLWE(dbLWE, s.Repetitions, rep)
+			//results = pirLWE(dbLWE, s.Repetitions, rep)
+			results = pirLWEParallel(dbLWE, s.Repetitions, rep)
 		case "cmp-vpir-lwe-128":
 			log.Printf("db info: %#v", dbLWE128.Info)
-			results = pirLWE128(dbLWE128, s.Repetitions)
+			results = pirLWE128Parallel(dbLWE128, s.Repetitions)
 		case "preprocessing":
 			log.Printf("Merkle preprocessing evaluation for dbLen %d bits\n", dbLen)
 			results = RandomMerkleDB(dbPRG, dbLen, nRows, blockLen, s.Repetitions)
@@ -308,10 +310,8 @@ func pirElliptic(db *database.Elliptic, nRepeat int) []*Chunk {
 	for j := 0; j < nRepeat; j++ {
 		log.Printf("start repetition %d out of %d", j+1, nRepeat)
 
-		// Messung vor der Wiederholung
 		logPerformanceMetrics("elliptic", fmt.Sprintf("Start of repition %d", j+1))
 
-		// Zeitmessung starten
 		measureExecutionTime("elliptic", func() {
 			results[j] = initChunk(numRetrievedBlocks)
 
@@ -407,7 +407,6 @@ func (s *Simulation) validSimulation() bool {
 }
 
 func logPerformanceMetrics(algoName string, step string) {
-	// Öffne Textdateien für das Speichern der Daten
 	cpuFile, err := os.OpenFile(fmt.Sprintf("%s_cpu_usage.txt", algoName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("Could not open CPU usage file: %v", err)
@@ -420,33 +419,27 @@ func logPerformanceMetrics(algoName string, step string) {
 	}
 	defer ramFile.Close()
 
-	// CPU-Auslastung messen
 	var numGoroutines = getCPUUsage()
 
-	// RAM-Auslastung messen
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	ramUsage := memStats.Alloc / 1024 / 1024 // In MB
 
-	// Ergebnisse speichern
 	fmt.Fprintf(cpuFile, "%s: Goroutines: %d\n", step, numGoroutines)
 	fmt.Fprintf(ramFile, "%s: RAM Usage: %d MB\n", step, ramUsage)
 }
 
 func measureExecutionTime(algoName string, fn func()) {
-	// Öffne Datei für Ausführungszeit
 	timeFile, err := os.OpenFile(fmt.Sprintf("%s_execution_time.txt", algoName), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("Could not open execution time file: %v", err)
 	}
 	defer timeFile.Close()
 
-	// Ausführungszeit messen
 	start := time.Now()
 	fn()
 	elapsed := time.Since(start)
 
-	// Ergebnisse speichern
 	fmt.Fprintf(timeFile, "Execution Time: %s\n", elapsed)
 }
 
@@ -456,4 +449,183 @@ func getCPUUsage() string {
 		return "Error measuring CPU usage"
 	}
 	return strings.TrimSpace(string(out))
+}
+
+func parallelTests(nRepeat int, numWorkers int, testFunc func(int)) {
+	jobs := make(chan int, nRepeat)
+	results := make(chan struct{}, nRepeat)
+
+	for w := 0; w < numWorkers; w++ {
+		go func() {
+			for j := range jobs {
+				testFunc(j)
+				results <- struct{}{}
+			}
+		}()
+	}
+
+	for j := 0; j < nRepeat; j++ {
+		jobs <- j
+	}
+	close(jobs)
+
+	for a := 0; a < nRepeat; a++ {
+		<-results
+	}
+}
+
+func pirLWE128Parallel(db *database.LWE128, nRepeat int) []*Chunk {
+	numRetrievedBlocks := 1
+	results := make([]*Chunk, nRepeat)
+
+	p := utils.ParamsWithDatabaseSize128(db.Info.NumRows, db.Info.NumColumns)
+	c := client.NewLWE128(utils.RandomPRG(), &db.Info, p)
+	s := server.NewLWE128(db)
+
+	numWorkers := runtime.NumCPU()
+	parallelTests(nRepeat, numWorkers, func(j int) {
+
+		log.Printf("start repetition %d out of %d", j+1, nRepeat)
+		results[j] = initChunk(numRetrievedBlocks)
+		logPerformanceMetrics("lwe128", fmt.Sprintf("Start of repitition %d", j+1))
+
+		measureExecutionTime("lwe128", func() {
+			// store digest size
+			results[j].Digest = db.Auth.DigestLWE128.BytesSize()
+
+			// pick a random block index to start the retrieval
+			ii := rand.Intn(db.NumRows)
+			jj := rand.Intn(db.NumColumns)
+			results[j].CPU[0] = initBlock(1)
+			results[j].Bandwidth[0] = initBlock(1)
+
+			t := time.Now()
+
+			query := c.Query(ii, jj)
+			answer := s.Answer(query)
+			if _, err := c.Reconstruct(answer); err != nil {
+				log.Fatal(err)
+			}
+
+			// store eval results
+			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
+			results[j].Bandwidth[0].Query = query.BytesSize()
+			results[j].Bandwidth[0].Answers[0] = answer.BytesSize()
+		})
+
+		logPerformanceMetrics("lwe128", fmt.Sprintf("End of repitition %d", j+1))
+		// GC after each repetition
+		runtime.GC()
+		time.Sleep(2)
+
+	})
+	return results
+}
+
+func pirLWEParallel(db *database.LWE, nRepeat, tECC int) []*Chunk {
+	numRetrievedBlocks := 1
+	results := make([]*Chunk, nRepeat)
+
+	p := utils.ParamsWithDatabaseSize(db.Info.NumRows, db.Info.NumColumns)
+	c := client.NewAmplify(utils.RandomPRG(), &db.Info, p, tECC)
+	s := server.NewAmplify(db)
+
+	numWorkers := runtime.NumCPU()
+	parallelTests(nRepeat, numWorkers, func(j int) {
+		log.Printf("start repetition %d out of %d", j+1, nRepeat)
+		results[j] = initChunk(numRetrievedBlocks)
+		logPerformanceMetrics("lwe", fmt.Sprintf("Start of repition %d", j+1))
+
+		measureExecutionTime("lwe", func() {
+			// store digest size
+			results[j].Digest = db.Auth.DigestLWE.BytesSize()
+			// pick a random block index to start the retrieval
+			ii := rand.Intn(db.NumRows)
+			jj := rand.Intn(db.NumColumns)
+			results[j].CPU[0] = initBlock(1)
+			results[j].Bandwidth[0] = initBlock(1)
+
+			t := time.Now()
+
+			query := c.Query(ii, jj)
+			answer := s.Answer(query)
+			if _, err := c.Reconstruct(answer); err != nil {
+				log.Fatal(err)
+			}
+			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
+			results[j].Bandwidth[0].Query = query[0].BytesSize() * float64(len(query))        // all matrices equal
+			results[j].Bandwidth[0].Answers[0] = float64(len(answer)) * answer[0].BytesSize() // all matrices equal
+
+		})
+
+		logPerformanceMetrics("lwe", fmt.Sprintf("End of repition %d", j+1))
+
+		// GC after each repetition
+		runtime.GC()
+		time.Sleep(2)
+	})
+
+	return results
+}
+
+func pirEllipticParallel(db *database.Elliptic, nRepeat int) []*Chunk {
+	numRetrievedBlocks := 1
+	results := make([]*Chunk, nRepeat)
+
+	prg := utils.RandomPRG()
+	c := client.NewDH(prg, &db.Info)
+	s := server.NewDH(db)
+
+	numWorkers := runtime.NumCPU()
+	parallelTests(nRepeat, numWorkers, func(j int) {
+		log.Printf("start repetition %d out of %d", j+1, nRepeat)
+
+		logPerformanceMetrics("elliptic", fmt.Sprintf("Start of repition %d", j+1))
+
+		measureExecutionTime("elliptic", func() {
+			results[j] = initChunk(numRetrievedBlocks)
+
+			// store digest size
+			results[j].Digest = float64(len(db.SubDigests)) + float64(len(db.Digest))
+
+			// pick a random block index to start the retrieval
+			index := rand.Intn(db.NumRows * db.NumColumns)
+			results[j].CPU[0] = initBlock(1)
+			results[j].Bandwidth[0] = initBlock(1)
+
+			//m.Reset()
+			t := time.Now()
+			query, err := c.QueryBytes(index)
+			if err != nil {
+				log.Fatal(err)
+			}
+			//results[j].CPU[0].Query = m.RecordAndReset()
+			results[j].CPU[0].Query = 0
+			results[j].Bandwidth[0].Query += float64(len(query))
+
+			// get server's answer
+			answer, err := s.AnswerBytes(query)
+			if err != nil {
+				log.Fatal(err)
+			}
+			//results[j].CPU[0].Answers[0] = m.RecordAndReset()
+			results[j].CPU[0].Answers[0] = 0
+			results[j].Bandwidth[0].Answers[0] = float64(len(answer))
+
+			_, err = c.ReconstructBytes(answer)
+			if err != nil {
+				log.Fatal(err)
+			}
+			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
+			results[j].Bandwidth[0].Reconstruct = 0
+
+		})
+		logPerformanceMetrics("elliptic", fmt.Sprintf("End of repition %d", j+1))
+		// GC after each repetition
+		runtime.GC()
+		time.Sleep(2)
+
+	})
+
+	return results
 }

@@ -479,21 +479,26 @@ func pirLWE128Parallel(db *database.LWE128, nRepeat int) []*Chunk {
 	results := make([]*Chunk, nRepeat)
 
 	p := utils.ParamsWithDatabaseSize128(db.Info.NumRows, db.Info.NumColumns)
-	c := client.NewLWE128(utils.RandomPRG(), &db.Info, p)
-	s := server.NewLWE128(db)
 
 	numWorkers := runtime.NumCPU()
 	parallelTests(nRepeat, numWorkers, func(j int) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("Panic occurred in repetition %d: %v", j+1, r)
+			}
+		}()
 
 		log.Printf("start repetition %d out of %d", j+1, nRepeat)
 		results[j] = initChunk(numRetrievedBlocks)
-		logPerformanceMetrics("lwe128", fmt.Sprintf("Start of repitition %d", j+1))
+
+		c := client.NewLWE128(utils.RandomPRG(), &db.Info, p)
+		s := server.NewLWE128(db)
+
+		logPerformanceMetrics("lwe128", fmt.Sprintf("Start of repetition %d", j+1))
 
 		measureExecutionTime("lwe128", func() {
-			// store digest size
 			results[j].Digest = db.Auth.DigestLWE128.BytesSize()
 
-			// pick a random block index to start the retrieval
 			ii := rand.Intn(db.NumRows)
 			jj := rand.Intn(db.NumColumns)
 			results[j].CPU[0] = initBlock(1)
@@ -502,23 +507,27 @@ func pirLWE128Parallel(db *database.LWE128, nRepeat int) []*Chunk {
 			t := time.Now()
 
 			query := c.Query(ii, jj)
+			if query == nil {
+				log.Fatalf("Failed to generate query: repetition %d, indices (%d, %d)", j+1, ii, jj)
+			}
 			answer := s.Answer(query)
+			if answer == nil {
+				log.Fatalf("Failed to generate answer: repetition %d, query size", j+1)
+			}
 			if _, err := c.Reconstruct(answer); err != nil {
-				log.Fatal(err)
+				log.Fatalf("Reconstruction failed: repetition %d, error: %v", j+1, err)
 			}
 
-			// store eval results
 			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
 			results[j].Bandwidth[0].Query = query.BytesSize()
 			results[j].Bandwidth[0].Answers[0] = answer.BytesSize()
 		})
 
-		logPerformanceMetrics("lwe128", fmt.Sprintf("End of repitition %d", j+1))
-		// GC after each repetition
+		logPerformanceMetrics("lwe128", fmt.Sprintf("End of repetition %d", j+1))
 		runtime.GC()
 		time.Sleep(2)
-
 	})
+
 	return results
 }
 
@@ -526,41 +535,61 @@ func pirLWEParallel(db *database.LWE, nRepeat, tECC int) []*Chunk {
 	numRetrievedBlocks := 1
 	results := make([]*Chunk, nRepeat)
 
-	p := utils.ParamsWithDatabaseSize(db.Info.NumRows, db.Info.NumColumns)
-	c := client.NewAmplify(utils.RandomPRG(), &db.Info, p, tECC)
-	s := server.NewAmplify(db)
-
 	numWorkers := runtime.NumCPU()
+
 	parallelTests(nRepeat, numWorkers, func(j int) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("Panic occurred in repetition %d: %v", j+1, r)
+			}
+		}()
+
 		log.Printf("start repetition %d out of %d", j+1, nRepeat)
 		results[j] = initChunk(numRetrievedBlocks)
-		logPerformanceMetrics("lwe", fmt.Sprintf("Start of repition %d", j+1))
+
+		// Jede Goroutine verwendet ihre eigene Client- und Server-Instanz
+		p := utils.ParamsWithDatabaseSize(db.Info.NumRows, db.Info.NumColumns)
+		c := client.NewAmplify(utils.RandomPRG(), &db.Info, p, tECC)
+		s := server.NewAmplify(db)
+
+		logPerformanceMetrics("lwe", fmt.Sprintf("Start of repetition %d", j+1))
 
 		measureExecutionTime("lwe", func() {
-			// store digest size
+			// Store digest size
 			results[j].Digest = db.Auth.DigestLWE.BytesSize()
-			// pick a random block index to start the retrieval
+
+			// Pick a random block index to start the retrieval
 			ii := rand.Intn(db.NumRows)
 			jj := rand.Intn(db.NumColumns)
 			results[j].CPU[0] = initBlock(1)
 			results[j].Bandwidth[0] = initBlock(1)
 
-			t := time.Now()
-
+			// Query generation
 			query := c.Query(ii, jj)
-			answer := s.Answer(query)
-			if _, err := c.Reconstruct(answer); err != nil {
-				log.Fatal(err)
+			if query == nil {
+				log.Fatalf("Failed to generate query: repetition %d, indices (%d, %d)", j+1, ii, jj)
 			}
-			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
+
+			// Answer generation
+			answer := s.Answer(query)
+			if answer == nil {
+				log.Fatalf("Failed to generate answer: repetition %d, query size %d", j+1, len(query))
+			}
+
+			// Reconstruction
+			if _, err := c.Reconstruct(answer); err != nil {
+				log.Fatalf("Reconstruction failed: repetition %d, error: %v", j+1, err)
+			}
+
+			// Store evaluation results
+			results[j].CPU[0].Reconstruct = time.Since(time.Now()).Seconds()
 			results[j].Bandwidth[0].Query = query[0].BytesSize() * float64(len(query))        // all matrices equal
 			results[j].Bandwidth[0].Answers[0] = float64(len(answer)) * answer[0].BytesSize() // all matrices equal
-
 		})
 
-		logPerformanceMetrics("lwe", fmt.Sprintf("End of repition %d", j+1))
+		logPerformanceMetrics("lwe", fmt.Sprintf("End of repetition %d", j+1))
 
-		// GC after each repetition
+		// Garbage Collection and Sleep
 		runtime.GC()
 		time.Sleep(2)
 	})
@@ -572,59 +601,59 @@ func pirEllipticParallel(db *database.Elliptic, nRepeat int) []*Chunk {
 	numRetrievedBlocks := 1
 	results := make([]*Chunk, nRepeat)
 
-	prg := utils.RandomPRG()
-	c := client.NewDH(prg, &db.Info)
-	s := server.NewDH(db)
-
 	numWorkers := runtime.NumCPU()
-	parallelTests(nRepeat, numWorkers, func(j int) {
-		log.Printf("start repetition %d out of %d", j+1, nRepeat)
+	prg := utils.RandomPRG()
 
-		logPerformanceMetrics("elliptic", fmt.Sprintf("Start of repition %d", j+1))
+	parallelTests(nRepeat, numWorkers, func(j int) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("Panic occurred in repetition %d: %v", j+1, r)
+			}
+		}()
+
+		log.Printf("start repetition %d out of %d", j+1, nRepeat)
+		results[j] = initChunk(numRetrievedBlocks)
+
+		// Jede Goroutine verwendet ihre eigene Client- und Server-Instanz
+		c := client.NewDH(prg, &db.Info)
+		s := server.NewDH(db)
+
+		logPerformanceMetrics("elliptic", fmt.Sprintf("Start of repetition %d", j+1))
 
 		measureExecutionTime("elliptic", func() {
-			results[j] = initChunk(numRetrievedBlocks)
-
-			// store digest size
+			// Store digest size
 			results[j].Digest = float64(len(db.SubDigests)) + float64(len(db.Digest))
 
-			// pick a random block index to start the retrieval
+			// Pick a random block index to start the retrieval
 			index := rand.Intn(db.NumRows * db.NumColumns)
 			results[j].CPU[0] = initBlock(1)
 			results[j].Bandwidth[0] = initBlock(1)
 
-			//m.Reset()
-			t := time.Now()
+			// Query generation
 			query, err := c.QueryBytes(index)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalf("Error generating query for repetition %d: %v", j+1, err)
 			}
-			//results[j].CPU[0].Query = m.RecordAndReset()
-			results[j].CPU[0].Query = 0
 			results[j].Bandwidth[0].Query += float64(len(query))
 
-			// get server's answer
+			// Server answer generation
 			answer, err := s.AnswerBytes(query)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalf("Error generating answer for repetition %d: %v", j+1, err)
 			}
-			//results[j].CPU[0].Answers[0] = m.RecordAndReset()
-			results[j].CPU[0].Answers[0] = 0
 			results[j].Bandwidth[0].Answers[0] = float64(len(answer))
 
-			_, err = c.ReconstructBytes(answer)
-			if err != nil {
-				log.Fatal(err)
+			// Reconstruct the result
+			if _, err = c.ReconstructBytes(answer); err != nil {
+				log.Fatalf("Reconstruction failed for repetition %d: %v", j+1, err)
 			}
-			results[j].CPU[0].Reconstruct = time.Since(t).Seconds()
-			results[j].Bandwidth[0].Reconstruct = 0
-
+			results[j].CPU[0].Reconstruct = time.Since(time.Now()).Seconds()
 		})
-		logPerformanceMetrics("elliptic", fmt.Sprintf("End of repition %d", j+1))
-		// GC after each repetition
+
+		logPerformanceMetrics("elliptic", fmt.Sprintf("End of repetition %d", j+1))
+		// Garbage Collection and Sleep
 		runtime.GC()
 		time.Sleep(2)
-
 	})
 
 	return results

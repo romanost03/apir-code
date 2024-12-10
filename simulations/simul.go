@@ -106,6 +106,9 @@ func main() {
 		1 << 13: 3,
 		1 << 23: 4,
 		1 << 33: 7,
+		1 << 10: 2,
+		1 << 20: 5,
+		1 << 30: 10,
 	}
 
 	// range over all the DB lengths specified in the general simulation config

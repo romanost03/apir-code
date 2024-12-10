@@ -3,7 +3,7 @@ import math
 sigma = 6.4
 secparam = 128
 q = pow(2, 32)
-db_sizes = [1 << 13, 1 << 23, 1 << 33]
+db_sizes = [1 << 13, 1 << 23, 1 << 33, 1 << 10, 1 << 20, 1 << 30]
 
 bounds = []
 

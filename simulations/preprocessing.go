@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"runtime"
@@ -37,6 +38,7 @@ func RandomMerkleDB(rnd io.Reader, dbLen, numRows, blockLen, nRepeat int) []*Chu
 
 	for j := 0; j < nRepeat; j++ {
 		log.Printf("start repetition %d out of %d", j+1, nRepeat)
+		logPerformanceMetrics("merkle", fmt.Sprintf("Start of repitition %d", j+1))
 		results[j] = initChunk(1)
 		results[j].CPU[0] = initBlock(1)
 
@@ -58,7 +60,15 @@ func RandomMerkleDB(rnd io.Reader, dbLen, numRows, blockLen, nRepeat int) []*Chu
 			blockLens[b] = blockLen
 		}
 
-		_ = generateMerkleProofsParallel(blocks, tree, blockLen)
+		measureExecutionTime("generateMerkleProofsParallel", func() {
+			_ = generateMerkleProofsParallel(blocks, tree, blockLen)
+		})
+
+		/*measureExecutionTime("generateMerkleProofs", func() {
+			_ = generateMerkleProofs(blocks, tree, blockLen)
+		})*/
+
+		logPerformanceMetrics("merkle", fmt.Sprintf("End of repitition %d", j+1))
 
 		results[j].CPU[0].Answers[0] = m.RecordAndReset()
 

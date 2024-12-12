@@ -36,7 +36,7 @@ def sort_ram_usage(key, folder_key):
 
         try:
             # Extrahiere relevante Informationen aus der Zeile
-            match = re.match(r"(Start|End) of repetition (\d+): RAM Usage: (\d+) MB", line)
+            match = re.match(r"(Start|End) of (?:repetition|repition|repitition) (\d+): RAM Usage: (\d+) MB", line)
             if not match:
                 raise ValueError(f"Ungültiges Zeilenformat: {line}")
 
@@ -762,15 +762,15 @@ if __name__ == '__main__':
             plot_CPU_LWE128()
             plot_RAM_LWE128()
     elif folder_key == "preprocessingPerformance":
-            clean_CPU_data(None, True, folder_key)
-            sort_CPU_usage(None, folder_key)
-            clean_CPU_data(None, False, folder_key)
-            merge_CPU_Usage(None, folder_key)
-            clean_Exec_data(None, folder_key)
-            #sort_ram_usage(None, folder_key)
-            #clean_RAM_data(None, folder_key)
-            plot_Exec_merkle()
-            plot_CPU_merkle()
+            #clean_CPU_data(None, True, folder_key)
+            #sort_CPU_usage(None, folder_key)
+            #clean_CPU_data(None, False, folder_key)
+            #merge_CPU_Usage(None, folder_key)
+            #clean_Exec_data(None, folder_key)
+            sort_ram_usage(None, folder_key)
+            clean_RAM_data(None, folder_key)
+            #plot_Exec_merkle()
+            #plot_CPU_merkle()
             #plot_RAM_merkle()
 
 

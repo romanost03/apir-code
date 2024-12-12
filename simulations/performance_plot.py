@@ -187,12 +187,12 @@ def clean_CPU_data(key, parallel, folder_key):
 
     print(f"CSV-Datei wurde erfolgreich erstellt: {output_file}")
 
-    if folder_key == "singlePerformance:":
+    if folder_key == "singlePerformance":
         if parallel is True:
             output_file= f'results/singlePerformance_logs_parallel/{key}_cpu_usage_max.csv'
         else:
             output_file= f'results/singlePerformance_logs/{key}_cpu_usage_max.csv'
-    elif folder_key == "preprocessingPerformance:":
+    elif folder_key == "preprocessingPerformance":
         if parallel is True:
             output_file= f'results/prepoPerformance_logs_parallelized/merkle_cpu_usage_max.csv'
         else:
@@ -236,11 +236,11 @@ def merge_CPU_Usage(key, folder_key):
     base_csv_file = None
     second_csv_file = None
     output_csv_file = None
-    if folder_key == "singlePerformance:":
+    if folder_key == "singlePerformance":
         base_csv_file = f'results/singlePerformance_logs/{key}_cpu_usage_max.csv'
         second_csv_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_sorted.csv'
         output_csv_file = f'results/CPU_usage_{key}.csv'
-    elif folder_key == "preprocessingPerformance:":
+    elif folder_key == "preprocessingPerformance":
         base_csv_file = f'results/prepoPerformance_logs/merkle_cpu_usage_max.csv'
         second_csv_file = f'results/prepoPerformance_logs_parallelized/merkle_cpu_usage_sorted.csv'
         output_csv_file = f'results/CPU_usage_merkle.csv'
@@ -267,12 +267,12 @@ def clean_RAM_data(key, folder_key):
     csv_file = None
     csv_file_2 = None
     output_file = None
-    if folder_key == "singlePerformance:":
+    if folder_key == "singlePerformance":
         txt_file = f"results/singlePerformance_logs/{key}_ram_usage.txt"  # Die .txt-Datei
         csv_file = f"results/singlePerformance_logs_parallel/{key}_ram_usage_normal.csv"  # Die bestehende CSV-Datei
         csv_file_2 = f'results/singlePerformance_logs_parallel/{key}_ram_usage_cleaned.csv'
         output_file = f"results/{key}_ram_usage_parallel.csv"
-    elif folder_key == "preprocessingPerformance:":
+    elif folder_key == "preprocessingPerformance":
         txt_file = f"results/prepoPerformance_logs/merkle_ram_usage.txt"  # Die .txt-Datei
         csv_file = f"results/prepoPerformance_logs_parallelized/merkle_ram_usage_normal.csv"  # Die bestehende CSV-Datei
         csv_file_2 = f'results/prepoPerformance_logs_parallelized/merkle_ram_usage_cleaned.csv'
@@ -314,6 +314,8 @@ def clean_RAM_data(key, folder_key):
 
     # Überprüfen, ob die Anzahl der Zeilen übereinstimmt
     if len(cleaned_data1) != len(cleaned_data2):
+        print(len(cleaned_data1))
+        print(len(cleaned_data2))
         raise ValueError("Die beiden Dateien haben unterschiedliche Mengen an Repetitions.")
 
     # Daten kombinieren
@@ -444,9 +446,9 @@ if __name__ == '__main__':
             #sort_CPU_usage(None, folder_key)
             #clean_CPU_data(None, False, folder_key)
             #merge_CPU_Usage(None, folder_key)
-            clean_Exec_data(None, folder_key)
+            #clean_Exec_data(None, folder_key)
             sort_ram_usage(None, folder_key)
-            clean_RAM_data(None, folder_key)
+            #clean_RAM_data(None, folder_key)
 
 
 

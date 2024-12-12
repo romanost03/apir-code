@@ -9,15 +9,13 @@ import os
 
 FOLDER_MAPPING = {
     "singlePerformance": "results/singlePerformance_logs",
-    "singlePerformance_parallelized": "results/singlePerformance_logs_parallel",
     "preprocessingPerformance": "results/prepoPerformance_logs",
-    "preprocessingPerformance_parallelized": "results/prepoPerformance_logs_parallelized"
 }
 
 
-def sort_ram_usage():
-    file_path = 'results/singlePerformance_logs_parallel/elliptic_ram_usage.txt'
-    output_path = 'results/singlePerformance_logs_parallel/elliptic_ram_usage_cleaned.csv'
+def sort_ram_usage(key):
+    file_path = f'results/singlePerformance_logs_parallel/{key}_ram_usage.txt'
+    output_path = f'results/singlePerformance_logs_parallel/{key}_ram_usage_cleaned.csv'
 
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -64,25 +62,34 @@ def sort_ram_usage():
             file.write(f"{start}\n")
             file.write(f"{end}\n")
 
-def sort_CPU_usage():
-    input_csv = 'results/singlePerformance_logs_parallel/elliptic_cpu_usage_max.csv'
-    output_csv = 'results/singlePerformance_logs_parallel/elliptic_cpu_usage_sorted.csv'
+def sort_CPU_usage(key):
+    input_csv = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_max.csv'
+    output_csv = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_sorted.csv'
+
     # Lade die CSV-Datei ein
+    rows = []  # Initialisiere eine Liste für die Daten
     with open(input_csv, "r") as infile:
         reader = csv.reader(infile)
-        header = next(reader)  # Kopfzeile überspringen
-        rows = list(reader)
+        try:
+            header = next(reader)  # Kopfzeile überspringen
+        except StopIteration:
+            raise ValueError(f"Die Datei {input_csv} ist leer oder ungültig.")  # Fehler bei leerer Datei
+
+        for line in reader:
+            if line:  # Überspringe leere Zeilen
+                rows.append(line)
+
+    if not rows:
+        raise ValueError(f"Keine gültigen Daten in der Datei {input_csv} gefunden.")
 
     # Liste für die sortierten Paare
     sorted_pairs = []
 
     # Set für bereits besuchte Zeilen
-    visited_indices = set()
+    visited_indices = __builtins__.set()
 
     # Gehe zeilenweise durch die Daten
     for i, row in enumerate(rows):
-        print(i)
-        print(row)
         if i in visited_indices:
             continue
 
@@ -128,13 +135,20 @@ def convert_to_ms(time_str):
         raise ValueError(f"Ungültiges Zeitformat: {time_str}")
 
 
-def clean_CPU_data():
-    input_file = 'results/singlePerformance_logs_parallel/elliptic_cpu_usage.txt'
-    output_file = 'results/singlePerformance_logs_parallel/elliptic_cpu_usage_cleaned.csv'
+def clean_CPU_data(key, parallel):
+
+    input_file = None
+    output_file = None
+    if parallel is True:
+        input_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage.txt'
+        output_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_cleaned.csv'
+    else:
+        input_file = f'results/singlePerformance_logs/{key}_cpu_usage.txt'
+        output_file = f'results/singlePerformance_logs/{key}_cpu_usage_cleaned.csv'
     iteration_numbers = []
 
     # Regex-Muster zum Erkennen von "Start of ..." oder "End of ..."
-    pattern = r"^(?:Start|End) of (?:repition|repetition) (\d+):"
+    pattern = r"^(?:Start|End) of (?:repition|repetition|repitition) (\d+):"
 
     # Eingabedatei zeilenweise lesen
     with open(input_file, "r") as file:
@@ -152,9 +166,12 @@ def clean_CPU_data():
 
     print(f"CSV-Datei wurde erfolgreich erstellt: {output_file}")
 
-    output_file= 'results/singlePerformance_logs_parallel/elliptic_cpu_usage_max.csv'
+    if parallel is True:
+        output_file= f'results/singlePerformance_logs_parallel/{key}_cpu_usage_max.csv'
+    else:
+        output_file= f'results/singlePerformance_logs/{key}_cpu_usage_max.csv'
 
-    pattern = r"(?:(?:Start|End) of (?:repetition|repition) (\d+): .*Cpu\(s\):\s+(\d+\.\d+)\s+us.*)|(?:%Cpu\(s\):\s+(\d+\.\d+)\s+us.*)"
+    pattern = r"(?:(?:Start|End) of (?:repetition|repition|repitition) (\d+): .*Cpu\(s\):\s+(\d+\.\d+)\s+us.*)|(?:%Cpu\(s\):\s+(\d+\.\d+)\s+us.*)"
     repetitions = []
     max_cpu_usages = []
     current_repetition = None
@@ -188,43 +205,33 @@ def clean_CPU_data():
         for rep, cpu in zip(repetitions, max_cpu_usages):
             writer.writerow([rep, cpu])
 
-    base_csv_file = "results/singlePerformance_logs/elliptic_cpu_usage_max.csv"
-    second_csv_file = "results/singlePerformance_logs_parallel/elliptic_cpu_usage_sorted.csv"
-    output_csv_file = "results/CPU_usage_elliptic.csv"
+def merge_CPU_Usage(key):
+    base_csv_file = f'results/singlePerformance_logs/{key}_cpu_usage_max.csv'
+    second_csv_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_sorted.csv'
+    output_csv_file = f'results/CPU_usage_{key}.csv'
 
-    # Daten aus der ersten CSV-Datei lesen
-    with open(base_csv_file, "r") as base_file:
-        base_reader = list(csv.reader(base_file))
-        base_header = base_reader[0]
-        base_data = base_reader[1:]
-
-    # Daten aus der zweiten CSV-Datei lesen
-    with open(second_csv_file, "r") as second_file:
-        second_reader = list(csv.reader(second_file))
-        second_header = second_reader[0]
-        second_data = second_reader[1:]
+    # CSV-Dateien laden
+    base_df = pd.read_csv(base_csv_file)
+    second_df = pd.read_csv(second_csv_file)
 
     # Überprüfen, ob die Anzahl der Zeilen übereinstimmt
-    if len(base_data) != len(second_data):
+    if len(base_df) != len(second_df):
         raise ValueError("Die beiden CSV-Dateien haben unterschiedliche Zeilenanzahlen.")
 
-    # Neue Spalte aus der zweiten CSV-Datei hinzufügen
-    merged_data = [base_header + ["Second_Max_CPU_Usage"]]
-    for base_row, second_row in zip(base_data, second_data):
-        merged_data.append(base_row + [second_row[1]])
+    # Neue Spalte aus der zweiten Datei hinzufügen
+    base_df["Second_Max_CPU_Usage_us"] = second_df["Max_CPU_Usage_us"]
 
-    # Zusammengeführte Daten in eine neue CSV-Datei schreiben
-    with open(output_csv_file, "w", newline="") as output_file:
-        writer = csv.writer(output_file)
-        writer.writerows(merged_data)
-
+    # Ergebnis in eine neue CSV-Datei speichern
+    base_df.to_csv(output_csv_file, index=False)
     print(f"Zusammenführung abgeschlossen. Ergebnis gespeichert in {output_csv_file}")
 
 
-def clean_RAM_data():
-    txt_file = "results/singlePerformance_logs_parallel/elliptic_ram_usage.txt"  # Die .txt-Datei
-    csv_file = "results/singlePerformance_logs_parallel/elliptic_ram_usage_cleaned.csv"  # Die bestehende CSV-Datei
-    output_file = "results/elliptic_ram_usage_parallel.csv"
+
+def clean_RAM_data(key):
+    txt_file = f"results/singlePerformance_logs/{key}_ram_usage.txt"  # Die .txt-Datei
+    csv_file = f"results/singlePerformance_logs_parallel/{key}_ram_usage_normal.csv"  # Die bestehende CSV-Datei
+    csv_file_2 = f'results/singlePerformance_logs_parallel/{key}_ram_usage_cleaned.csv'
+    output_file = f"results/{key}_ram_usage_parallel.csv"
 
 
     with open(txt_file, "r") as txt, open(csv_file, "w", newline="") as csv_out:
@@ -234,31 +241,55 @@ def clean_RAM_data():
             # Schreibe jede Zeile aus der TXT-Datei unverändert in die CSV-Datei
             writer.writerow([line.strip()])
 
-    cleaned_data = []
+    # Daten für beide Dateien bereinigen
+    cleaned_data1 = []
+    cleaned_data2 = []
 
-    # Datei einlesen und Zeilen verarbeiten
-    with open(csv_file, "r") as file:
-        for line in file:
-            # Muster zum Extrahieren von Repetition-Nummer und RAM-Wert
-            match = re.match(r"^(?:Start|End) of (?:repition|repetition) (\d+): RAM Usage: (\d+) MB", line)
-            print(match)
+    # Datei 1 einlesen und bereinigen
+    with open(csv_file, "r") as file1:
+        reader1 = csv.reader(file1)
+        next(reader1, None)  # Überspringe die Header-Zeile, falls vorhanden
+        for line in file1:
+            match = re.match(r"^(?:Start|End) of (?:repition|repetition|repitition) (\d+): RAM Usage: (\d+) MB", line.strip())
             if match:
                 repetition = int(match.group(1))
                 ram_usage = int(match.group(2))
-                cleaned_data.append([repetition, ram_usage])
+                cleaned_data1.append([repetition, ram_usage])
 
-    # Bereinigte Daten in eine CSV-Datei schreiben
-    with open(output_file, "w", newline="") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["Repetition", "RAM_Usage_MB"])
-        writer.writerows(cleaned_data)
+    # Datei 2 einlesen und bereinigen
+    with open(csv_file_2, "r") as file2:
+        reader2 = csv.reader(file2)
+        next(reader2, None)  # Überspringe die Header-Zeile, falls vorhanden
+        for line in file2:
+            match = re.match(r"^(?:Start|End) of (?:repition|repetition|repitition) (\d+): RAM Usage: (\d+) MB", line.strip())
+            if match:
+                repetition = int(match.group(1))
+                ram_usage = int(match.group(2))
+                cleaned_data2.append([repetition, ram_usage])
 
-    print(f"Die Datei wurde erfolgreich in {csv_file} konvertiert.")
+    # Überprüfen, ob die Anzahl der Zeilen übereinstimmt
+    if len(cleaned_data1) != len(cleaned_data2):
+        raise ValueError("Die beiden Dateien haben unterschiedliche Mengen an Repetitions.")
 
-def clean_Exec_data():
-    file1 = 'results/singlePerformance_logs/elliptic_execution_time.txt'
-    file2 = 'results/singlePerformance_logs_parallel/elliptic_execution_time.txt'
-    output_file = 'results/elliptic_execution_time.csv'
+    # Daten kombinieren
+    merged_data = []
+    for row1, row2 in zip(cleaned_data1, cleaned_data2):
+        merged_data.append([row1[0], row1[1], row2[1]])
+
+    # Ergebnisse in eine neue CSV-Datei schreiben
+    with open(output_file, "w", newline="") as outfile:
+        writer = csv.writer(outfile)
+        writer.writerow(["Repetition", "RAM_Usage_File1_MB", "RAM_Usage_File2_MB"])
+        writer.writerows(merged_data)
+
+    print(f"Die bereinigten und kombinierten Daten wurden in {output_file} gespeichert.")
+
+
+
+def clean_Exec_data(key):
+    file1 = f'results/singlePerformance_logs/{key}_execution_time.txt'
+    file2 = f'results/singlePerformance_logs_parallel/{key}_execution_time.txt'
+    output_file = f'results/{key}_execution_time.csv'
     # Beide Dateien lesen
     with open(file1, "r") as f1, open(file2, "r") as f2:
         lines1 = [line.strip() for line in f1.readlines() if "Execution Time:" in line]
@@ -329,7 +360,6 @@ def plot_Exec_merkle():
 
 
 if __name__ == '__main__':
-    clean_CPU_data()
     if len(sys.argv) < 2:
         print("Usage: python performance_plot.py <key>")
         print("Available options: ")
@@ -346,7 +376,19 @@ if __name__ == '__main__':
 
     print(f"Evaluate performance for folder: {folder_path}")
 
-    if folder_key == "singlePerformance" or folder_key == "singlePerformance_parallelized":
+    if folder_key == "singlePerformance":
+        list = {"lwe128"}
+        for key in list:
+            clean_CPU_data(key, True)
+            sort_CPU_usage(key)
+            clean_CPU_data(key, False)
+            merge_CPU_Usage(key)
+            clean_Exec_data(key)
+            sort_ram_usage(key)
+            clean_RAM_data(key)
+    elif folder_key == "preprocessingPerformance":
         pass
-    elif folder_key == "preprocessingPerformance" or folder_key == "preprocessingPerformance_parallelized":
-        pass
+
+
+
+

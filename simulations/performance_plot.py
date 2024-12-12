@@ -394,7 +394,7 @@ def plot_CPU_elliptic():
 
     # Plot anzeigen
     plt.tight_layout()
-    plt.show()
+    plt.savefig('figures/CPU_elliptic.png', dpi=300)
 
 
 def plot_RAM_elliptic():
@@ -426,7 +426,7 @@ def plot_RAM_elliptic():
 
     # Diagramm anzeigen
     plt.grid(True)
-    plt.show()
+    plt.savefig('figures/RAM_elliptic.png', dpi=300)
 
 
 def plot_Exec_elliptic():
@@ -459,7 +459,7 @@ def plot_Exec_elliptic():
 
     # Diagramm anzeigen
     plt.grid(True)
-    plt.show()
+    plt.savefig('figures/execution_elliptic.png', dpi=300)
 
 
 def plot_CPU_LWE():
@@ -490,7 +490,7 @@ def plot_CPU_LWE():
 
     # Plot anzeigen
     plt.tight_layout()
-    plt.show()
+    plt.savefig('figures/CPU_LWE.png', dpi=300)
 
 
 def plot_RAM_LWE():
@@ -522,7 +522,7 @@ def plot_RAM_LWE():
 
     # Diagramm anzeigen
     plt.grid(True)
-    plt.show()
+    plt.savefig('figures/RAM_LWE.png', dpi=300)
 
 
 def plot_Exec_LWE():
@@ -555,7 +555,7 @@ def plot_Exec_LWE():
 
     # Diagramm anzeigen
     plt.grid(True)
-    plt.show()
+    plt.savefig('figures/execution_lwe.png', dpi=300)
 
 
 def plot_CPU_LWE128():
@@ -586,7 +586,7 @@ def plot_CPU_LWE128():
 
     # Plot anzeigen
     plt.tight_layout()
-    plt.show()
+    plt.savefig('figures/CPU_lwe128.png', dpi=300)
 
 
 def plot_RAM_LWE128():
@@ -618,7 +618,7 @@ def plot_RAM_LWE128():
 
     # Diagramm anzeigen
     plt.grid(True)
-    plt.show()
+    plt.savefig('figures/ram_lwe128.png', dpi=300)
 
 
 def plot_Exec_LWE128():
@@ -651,7 +651,7 @@ def plot_Exec_LWE128():
 
     # Diagramm anzeigen
     plt.grid(True)
-    plt.show()
+    plt.savefig('figures/execution_lwe128.png', dpi=300)
 
 
 def plot_CPU_merkle():
@@ -682,7 +682,7 @@ def plot_CPU_merkle():
 
     # Plot anzeigen
     plt.tight_layout()
-    plt.show()
+    plt.savefig('figures/CPU_merkle.png', dpi=300)
 
 
 def plot_RAM_merkle():
@@ -719,7 +719,7 @@ def plot_Exec_merkle():
 
     # Diagramm anzeigen
     plt.grid(True)
-    plt.show()
+    plt.savefig('figures/execution_merkle.png', dpi=300)
 
 
 if __name__ == '__main__':
@@ -749,15 +749,29 @@ if __name__ == '__main__':
             clean_Exec_data(key, folder_key)
             sort_ram_usage(key, folder_key)
             clean_RAM_data(key, folder_key)
-    elif folder_key == "preprocessingPerformance":
-            #clean_CPU_data(None, True, folder_key)
-            #sort_CPU_usage(None, folder_key)
-            #clean_CPU_data(None, False, folder_key)
-            #merge_CPU_Usage(None, folder_key)
-            #clean_Exec_data(None, folder_key)
-            sort_ram_usage(None, folder_key)
-            clean_RAM_data(None, folder_key)
 
+            plot_Exec_elliptic()
+            plot_CPU_elliptic()
+            plot_RAM_elliptic()
+
+            plot_Exec_LWE()
+            plot_CPU_LWE()
+            plot_RAM_LWE()
+
+            plot_Exec_LWE128()
+            plot_CPU_LWE128()
+            plot_RAM_LWE128()
+    elif folder_key == "preprocessingPerformance":
+            clean_CPU_data(None, True, folder_key)
+            sort_CPU_usage(None, folder_key)
+            clean_CPU_data(None, False, folder_key)
+            merge_CPU_Usage(None, folder_key)
+            clean_Exec_data(None, folder_key)
+            #sort_ram_usage(None, folder_key)
+            #clean_RAM_data(None, folder_key)
+            plot_Exec_merkle()
+            plot_CPU_merkle()
+            #plot_RAM_merkle()
 
 
 

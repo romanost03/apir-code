@@ -13,9 +13,15 @@ FOLDER_MAPPING = {
 }
 
 
-def sort_ram_usage(key):
-    file_path = f'results/singlePerformance_logs_parallel/{key}_ram_usage.txt'
-    output_path = f'results/singlePerformance_logs_parallel/{key}_ram_usage_cleaned.csv'
+def sort_ram_usage(key, folder_key):
+    file_path = None
+    output_path = None
+    if folder_key == "singlePerformance":
+        file_path = f'results/singlePerformance_logs_parallel/{key}_ram_usage.txt'
+        output_path = f'results/singlePerformance_logs_parallel/{key}_ram_usage_cleaned.csv'
+    elif folder_key == "preprocessingPerformance":
+        file_path = f'results/prepoPerformance_logs_parallelized/merkle_ram_usage.txt'
+        output_path = f'results/prepoPerformance_logs_parallelized/merkle_ram_usage_cleaned.csv'
 
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -62,9 +68,15 @@ def sort_ram_usage(key):
             file.write(f"{start}\n")
             file.write(f"{end}\n")
 
-def sort_CPU_usage(key):
-    input_csv = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_max.csv'
-    output_csv = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_sorted.csv'
+def sort_CPU_usage(key, folder_key):
+    input_csv = None
+    output_csv = None
+    if folder_key == "singlePerformance":
+        input_csv = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_max.csv'
+        output_csv = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_sorted.csv'
+    elif folder_key == "preprocessingPerformance":
+        input_csv = f'results/prepoPerformance_logs_parallelized/merkle_cpu_usage_max.csv'
+        output_csv = f'results/prepoPerformance_logs_parallelized/merkle_cpu_usage_sorted.csv'
 
     # Lade die CSV-Datei ein
     rows = []  # Initialisiere eine Liste für die Daten
@@ -135,16 +147,25 @@ def convert_to_ms(time_str):
         raise ValueError(f"Ungültiges Zeitformat: {time_str}")
 
 
-def clean_CPU_data(key, parallel):
+def clean_CPU_data(key, parallel, folder_key):
 
     input_file = None
     output_file = None
-    if parallel is True:
-        input_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage.txt'
-        output_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_cleaned.csv'
-    else:
-        input_file = f'results/singlePerformance_logs/{key}_cpu_usage.txt'
-        output_file = f'results/singlePerformance_logs/{key}_cpu_usage_cleaned.csv'
+    if folder_key == "singlePerformance":
+        if parallel is True:
+            input_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage.txt'
+            output_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_cleaned.csv'
+        else:
+            input_file = f'results/singlePerformance_logs/{key}_cpu_usage.txt'
+            output_file = f'results/singlePerformance_logs/{key}_cpu_usage_cleaned.csv'
+    elif folder_key == "preprocessingPerformance":
+        if parallel is True:
+            input_file = f'results/prepoPerformance_logs_parallelized/merkle_cpu_usage.txt'
+            output_file = f'results/prepoPerformance_logs_parallelized/merkle_cpu_usage_cleaned.csv'
+        else:
+            input_file = f'results/prepoPerformance_logs/merkle_cpu_usage.txt'
+            output_file = f'results/prepoPerformance_logs/merkle_cpu_usage_cleaned.csv'
+
     iteration_numbers = []
 
     # Regex-Muster zum Erkennen von "Start of ..." oder "End of ..."
@@ -166,10 +187,16 @@ def clean_CPU_data(key, parallel):
 
     print(f"CSV-Datei wurde erfolgreich erstellt: {output_file}")
 
-    if parallel is True:
-        output_file= f'results/singlePerformance_logs_parallel/{key}_cpu_usage_max.csv'
-    else:
-        output_file= f'results/singlePerformance_logs/{key}_cpu_usage_max.csv'
+    if folder_key == "singlePerformance:":
+        if parallel is True:
+            output_file= f'results/singlePerformance_logs_parallel/{key}_cpu_usage_max.csv'
+        else:
+            output_file= f'results/singlePerformance_logs/{key}_cpu_usage_max.csv'
+    elif folder_key == "preprocessingPerformance:":
+        if parallel is True:
+            output_file= f'results/prepoPerformance_logs_parallelized/merkle_cpu_usage_max.csv'
+        else:
+            output_file= f'results/prepoPerformance_logs/merkle_cpu_usage_max.csv'
 
     pattern = r"(?:(?:Start|End) of (?:repetition|repition|repitition) (\d+): .*Cpu\(s\):\s+(\d+\.\d+)\s+us.*)|(?:%Cpu\(s\):\s+(\d+\.\d+)\s+us.*)"
     repetitions = []
@@ -205,10 +232,18 @@ def clean_CPU_data(key, parallel):
         for rep, cpu in zip(repetitions, max_cpu_usages):
             writer.writerow([rep, cpu])
 
-def merge_CPU_Usage(key):
-    base_csv_file = f'results/singlePerformance_logs/{key}_cpu_usage_max.csv'
-    second_csv_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_sorted.csv'
-    output_csv_file = f'results/CPU_usage_{key}.csv'
+def merge_CPU_Usage(key, folder_key):
+    base_csv_file = None
+    second_csv_file = None
+    output_csv_file = None
+    if folder_key == "singlePerformance:":
+        base_csv_file = f'results/singlePerformance_logs/{key}_cpu_usage_max.csv'
+        second_csv_file = f'results/singlePerformance_logs_parallel/{key}_cpu_usage_sorted.csv'
+        output_csv_file = f'results/CPU_usage_{key}.csv'
+    elif folder_key == "preprocessingPerformance:":
+        base_csv_file = f'results/prepoPerformance_logs/merkle_cpu_usage_max.csv'
+        second_csv_file = f'results/prepoPerformance_logs_parallelized/merkle_cpu_usage_sorted.csv'
+        output_csv_file = f'results/CPU_usage_merkle.csv'
 
     # CSV-Dateien laden
     base_df = pd.read_csv(base_csv_file)
@@ -227,11 +262,21 @@ def merge_CPU_Usage(key):
 
 
 
-def clean_RAM_data(key):
-    txt_file = f"results/singlePerformance_logs/{key}_ram_usage.txt"  # Die .txt-Datei
-    csv_file = f"results/singlePerformance_logs_parallel/{key}_ram_usage_normal.csv"  # Die bestehende CSV-Datei
-    csv_file_2 = f'results/singlePerformance_logs_parallel/{key}_ram_usage_cleaned.csv'
-    output_file = f"results/{key}_ram_usage_parallel.csv"
+def clean_RAM_data(key, folder_key):
+    txt_file = None
+    csv_file = None
+    csv_file_2 = None
+    output_file = None
+    if folder_key == "singlePerformance:":
+        txt_file = f"results/singlePerformance_logs/{key}_ram_usage.txt"  # Die .txt-Datei
+        csv_file = f"results/singlePerformance_logs_parallel/{key}_ram_usage_normal.csv"  # Die bestehende CSV-Datei
+        csv_file_2 = f'results/singlePerformance_logs_parallel/{key}_ram_usage_cleaned.csv'
+        output_file = f"results/{key}_ram_usage_parallel.csv"
+    elif folder_key == "preprocessingPerformance:":
+        txt_file = f"results/prepoPerformance_logs/merkle_ram_usage.txt"  # Die .txt-Datei
+        csv_file = f"results/prepoPerformance_logs_parallelized/merkle_ram_usage_normal.csv"  # Die bestehende CSV-Datei
+        csv_file_2 = f'results/prepoPerformance_logs_parallelized/merkle_ram_usage_cleaned.csv'
+        output_file = f"results/merkle_ram_usage_parallel.csv"
 
 
     with open(txt_file, "r") as txt, open(csv_file, "w", newline="") as csv_out:
@@ -286,10 +331,18 @@ def clean_RAM_data(key):
 
 
 
-def clean_Exec_data(key):
-    file1 = f'results/singlePerformance_logs/{key}_execution_time.txt'
-    file2 = f'results/singlePerformance_logs_parallel/{key}_execution_time.txt'
-    output_file = f'results/{key}_execution_time.csv'
+def clean_Exec_data(key, key_folder):
+    file1 = None
+    file2 = None
+    output_file = None
+    if key_folder == "singlePerformance":
+        file1 = f'results/singlePerformance_logs/{key}_execution_time.txt'
+        file2 = f'results/singlePerformance_logs_parallel/{key}_execution_time.txt'
+        output_file = f'results/{key}_execution_time.csv'
+    elif key_folder == "preprocessingPerformance":
+        file1 = f'results/prepoPerformance_logs/generateMerkleProofs_execution_time.txt'
+        file2 = f'results/prepoPerformance_logs_parallelized/generateMerkleProofsParallel_execution_time.txt'
+        output_file = f'results/merkle_execution_time.csv'
     # Beide Dateien lesen
     with open(file1, "r") as f1, open(file2, "r") as f2:
         lines1 = [line.strip() for line in f1.readlines() if "Execution Time:" in line]
@@ -377,17 +430,23 @@ if __name__ == '__main__':
     print(f"Evaluate performance for folder: {folder_path}")
 
     if folder_key == "singlePerformance":
-        list = {"lwe128"}
+        list = {"lwe128", "lwe", "elliptic"}
         for key in list:
-            clean_CPU_data(key, True)
-            sort_CPU_usage(key)
-            clean_CPU_data(key, False)
-            merge_CPU_Usage(key)
-            clean_Exec_data(key)
-            sort_ram_usage(key)
-            clean_RAM_data(key)
+            clean_CPU_data(key, True, folder_key)
+            sort_CPU_usage(key, folder_key)
+            clean_CPU_data(key, False, folder_key)
+            merge_CPU_Usage(key, folder_key)
+            clean_Exec_data(key, folder_key)
+            sort_ram_usage(key, folder_key)
+            clean_RAM_data(key, folder_key)
     elif folder_key == "preprocessingPerformance":
-        pass
+            #clean_CPU_data(None, True, folder_key)
+            #sort_CPU_usage(None, folder_key)
+            #clean_CPU_data(None, False, folder_key)
+            #merge_CPU_Usage(None, folder_key)
+            clean_Exec_data(None, folder_key)
+            sort_ram_usage(None, folder_key)
+            clean_RAM_data(None, folder_key)
 
 
 

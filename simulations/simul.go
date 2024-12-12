@@ -172,6 +172,7 @@ func main() {
 			results = pirLWEParallel(dbLWE, s.Repetitions, rep)
 		case "cmp-vpir-lwe-128":
 			log.Printf("db info: %#v", dbLWE128.Info)
+			//results = pirLWE128(dbLWE128, s.Repetitions)
 			results = pirLWE128Parallel(dbLWE128, s.Repetitions)
 		case "preprocessing":
 			log.Printf("Merkle preprocessing evaluation for dbLen %d bits\n", dbLen)

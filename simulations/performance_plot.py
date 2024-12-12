@@ -687,7 +687,6 @@ def plot_CPU_merkle():
 
 def plot_RAM_merkle():
     csv_file = f'results/merkle_ram_usage_parallel.csv'
-
     # Daten aus der CSV-Datei lesen
     repetitions = []
     ram_usage_file1 = []
@@ -701,20 +700,25 @@ def plot_RAM_merkle():
             ram_usage_file1.append(int(row[1]))
             ram_usage_file2.append(int(row[2]))
 
-    # Scatter-Plot erstellen
+    # Plot 1: RAM Usage File 1
     plt.figure(figsize=(10, 6))
-    plt.scatter(repetitions, ram_usage_file1, color="blue", label="RAM Usage (MB)", marker="o")
-    plt.scatter(repetitions, ram_usage_file2, color="red", label="RAM Usage (MB) Parallelized", marker="o")
-
-    # Achsenbeschriftungen und Titel
+    plt.scatter(repetitions, ram_usage_file1, color="blue", marker="o")
     plt.xlabel("Repetition")
     plt.ylabel("RAM Usage (MB)")
-    plt.title("RAM Usage per Repetition")
-    plt.legend()
-
-    # Diagramm anzeigen
+    plt.title("RAM Usage (MB) - File 1")
     plt.grid(True)
-    plt.savefig('figures/ram_merkle.png', dpi=300)
+    plt.savefig('figures/ram_usage_merkle1.png', dpi=300)
+    plt.close()
+
+    # Plot 2: RAM Usage File 2
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, ram_usage_file2, color="red", marker="o")
+    plt.xlabel("Repetition")
+    plt.ylabel("RAM Usage (MB)")
+    plt.title("RAM Usage (MB) - File 2")
+    plt.grid(True)
+    plt.savefig('figures/ram_usage_merkle2.png', dpi=300)
+    plt.close()
 
 
 def plot_Exec_merkle():
@@ -752,7 +756,6 @@ def plot_Exec_merkle():
 
 if __name__ == '__main__':
     plot_RAM_merkle()
-    plot_RAM_LWE128()
     if len(sys.argv) < 2:
         print("Usage: python performance_plot.py <key>")
         print("Available options: ")

@@ -686,7 +686,35 @@ def plot_CPU_merkle():
 
 
 def plot_RAM_merkle():
-    pass
+    csv_file = f'results/merkle_ram_usage_parallel.csv'
+
+    # Daten aus der CSV-Datei lesen
+    repetitions = []
+    ram_usage_file1 = []
+    ram_usage_file2 = []
+
+    with open(csv_file, "r") as file:
+        reader = csv.reader(file)
+        next(reader)  # Überspringe die Kopfzeile
+        for row in reader:
+            repetitions.append(int(row[0]))
+            ram_usage_file1.append(int(row[1]))
+            ram_usage_file2.append(int(row[2]))
+
+    # Scatter-Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, ram_usage_file1, color="blue", label="RAM Usage (MB)", marker="o")
+    plt.scatter(repetitions, ram_usage_file2, color="red", label="RAM Usage (MB) Parallelized", marker="o")
+
+    # Achsenbeschriftungen und Titel
+    plt.xlabel("Repetition")
+    plt.ylabel("RAM Usage (MB)")
+    plt.title("RAM Usage per Repetition")
+    plt.legend()
+
+    # Diagramm anzeigen
+    plt.grid(True)
+    plt.savefig('figures/ram_merkle.png', dpi=300)
 
 
 def plot_Exec_merkle():
@@ -723,6 +751,8 @@ def plot_Exec_merkle():
 
 
 if __name__ == '__main__':
+    plot_RAM_merkle()
+    plot_RAM_LWE128()
     if len(sys.argv) < 2:
         print("Usage: python performance_plot.py <key>")
         print("Available options: ")
@@ -762,16 +792,16 @@ if __name__ == '__main__':
             plot_CPU_LWE128()
             plot_RAM_LWE128()
     elif folder_key == "preprocessingPerformance":
-            #clean_CPU_data(None, True, folder_key)
-            #sort_CPU_usage(None, folder_key)
-            #clean_CPU_data(None, False, folder_key)
-            #merge_CPU_Usage(None, folder_key)
-            #clean_Exec_data(None, folder_key)
+            clean_CPU_data(None, True, folder_key)
+            sort_CPU_usage(None, folder_key)
+            clean_CPU_data(None, False, folder_key)
+            merge_CPU_Usage(None, folder_key)
+            clean_Exec_data(None, folder_key)
             sort_ram_usage(None, folder_key)
             clean_RAM_data(None, folder_key)
-            #plot_Exec_merkle()
-            #plot_CPU_merkle()
-            #plot_RAM_merkle()
+            plot_Exec_merkle()
+            plot_CPU_merkle()
+            plot_RAM_merkle()
 
 
 

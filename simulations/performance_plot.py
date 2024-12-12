@@ -367,43 +367,322 @@ def clean_Exec_data(key, key_folder):
 
 
 def plot_CPU_elliptic():
-    pass
+    csv_file_path = 'results/CPU_usage_elliptic.csv'
+    repetitions = []
+    max_cpu_usage = []
+    second_max_cpu_usage = []
+
+    # Daten aus der CSV-Datei einlesen
+    with open(csv_file_path, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            repetitions.append(int(row['Repetition']))
+            max_cpu_usage.append(float(row['Max_CPU_Usage_us']))
+            second_max_cpu_usage.append(float(row['Second_Max_CPU_Usage_us']))
+
+    # Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, max_cpu_usage, label='CPU Usage (us)', marker='o')
+    plt.scatter(repetitions, second_max_cpu_usage, label='CPU Usage (us) parallelized', marker='x')
+
+    # Plot anpassen
+    plt.title('CPU Usage Elliptic curves Comparison')
+    plt.xlabel('Repetition')
+    plt.ylabel('CPU Usage (us)')
+    plt.legend()
+    plt.grid(True)
+
+    # Plot anzeigen
+    plt.tight_layout()
+    plt.show()
 
 
 def plot_RAM_elliptic():
-    pass
+    csv_file = f'results/elliptic_ram_usage_parallel.csv'
+
+    # Daten aus der CSV-Datei lesen
+    repetitions = []
+    ram_usage_file1 = []
+    ram_usage_file2 = []
+
+    with open(csv_file, "r") as file:
+        reader = csv.reader(file)
+        next(reader)  # Überspringe die Kopfzeile
+        for row in reader:
+            repetitions.append(int(row[0]))
+            ram_usage_file1.append(int(row[1]))
+            ram_usage_file2.append(int(row[2]))
+
+    # Scatter-Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, ram_usage_file1, color="blue", label="RAM Usage (MB)", marker="o")
+    plt.scatter(repetitions, ram_usage_file2, color="red", label="RAM Usage (MB) Parallelized", marker="o")
+
+    # Achsenbeschriftungen und Titel
+    plt.xlabel("Repetition")
+    plt.ylabel("RAM Usage (MB)")
+    plt.title("RAM Usage per Repetition")
+    plt.legend()
+
+    # Diagramm anzeigen
+    plt.grid(True)
+    plt.show()
 
 
 def plot_Exec_elliptic():
-    pass
+    # Pfad zur CSV-Datei
+    csv_file = f'results/elliptic_execution_time.csv'
+
+    # Daten aus der CSV-Datei lesen
+    repetitions = []
+    execution_time_1 = []
+    execution_time_2 = []
+
+    with open(csv_file, "r") as file:
+        reader = csv.reader(file)
+        next(reader)  # Überspringe die Kopfzeile
+        for row in reader:
+            repetitions.append(int(row[0]))
+            execution_time_1.append(float(row[1]))
+            execution_time_2.append(float(row[2]))
+
+    # Scatter-Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, execution_time_1, color="blue", label="Execution_Time", marker="o")
+    plt.scatter(repetitions, execution_time_2, color="red", label="Execution_Time_Parallelized", marker="o")
+
+    # Achsenbeschriftungen und Titel
+    plt.xlabel("Repetition")
+    plt.ylabel("Execution Time (ms)")
+    plt.title("Execution Time per Repetition for elliptic curve")
+    plt.legend()
+
+    # Diagramm anzeigen
+    plt.grid(True)
+    plt.show()
 
 
 def plot_CPU_LWE():
-    pass
+    csv_file_path = 'results/CPU_usage_lwe.csv'
+    repetitions = []
+    max_cpu_usage = []
+    second_max_cpu_usage = []
+
+    # Daten aus der CSV-Datei einlesen
+    with open(csv_file_path, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            repetitions.append(int(row['Repetition']))
+            max_cpu_usage.append(float(row['Max_CPU_Usage_us']))
+            second_max_cpu_usage.append(float(row['Second_Max_CPU_Usage_us']))
+
+    # Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, max_cpu_usage, label='CPU Usage (us)', marker='o')
+    plt.scatter(repetitions, second_max_cpu_usage, label='CPU Usage (us) parallelized', marker='x')
+
+    # Plot anpassen
+    plt.title('CPU Usage of LWE Comparison')
+    plt.xlabel('Repetition')
+    plt.ylabel('CPU Usage (us)')
+    plt.legend()
+    plt.grid(True)
+
+    # Plot anzeigen
+    plt.tight_layout()
+    plt.show()
 
 
 def plot_RAM_LWE():
-    pass
+    csv_file = f'results/lwe_ram_usage_parallel.csv'
+
+    # Daten aus der CSV-Datei lesen
+    repetitions = []
+    ram_usage_file1 = []
+    ram_usage_file2 = []
+
+    with open(csv_file, "r") as file:
+        reader = csv.reader(file)
+        next(reader)  # Überspringe die Kopfzeile
+        for row in reader:
+            repetitions.append(int(row[0]))
+            ram_usage_file1.append(int(row[1]))
+            ram_usage_file2.append(int(row[2]))
+
+    # Scatter-Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, ram_usage_file1, color="blue", label="RAM Usage (MB)", marker="o")
+    plt.scatter(repetitions, ram_usage_file2, color="red", label="RAM Usage (MB) Parallelized", marker="o")
+
+    # Achsenbeschriftungen und Titel
+    plt.xlabel("Repetition")
+    plt.ylabel("RAM Usage (MB)")
+    plt.title("RAM Usage per Repetition")
+    plt.legend()
+
+    # Diagramm anzeigen
+    plt.grid(True)
+    plt.show()
 
 
 def plot_Exec_LWE():
-    pass
+    # Pfad zur CSV-Datei
+    csv_file = f'results/lwe_execution_time.csv'
+
+    # Daten aus der CSV-Datei lesen
+    repetitions = []
+    execution_time_1 = []
+    execution_time_2 = []
+
+    with open(csv_file, "r") as file:
+        reader = csv.reader(file)
+        next(reader)  # Überspringe die Kopfzeile
+        for row in reader:
+            repetitions.append(int(row[0]))
+            execution_time_1.append(float(row[1]))
+            execution_time_2.append(float(row[2]))
+
+    # Scatter-Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, execution_time_1, color="blue", label="Execution_Time", marker="o")
+    plt.scatter(repetitions, execution_time_2, color="red", label="Execution_Time_Parallelized", marker="o")
+
+    # Achsenbeschriftungen und Titel
+    plt.xlabel("Repetition")
+    plt.ylabel("Execution Time (ms)")
+    plt.title("Execution Time per Repetition for LWE")
+    plt.legend()
+
+    # Diagramm anzeigen
+    plt.grid(True)
+    plt.show()
 
 
 def plot_CPU_LWE128():
-    pass
+    csv_file_path = 'results/CPU_usage_lwe128.csv'
+    repetitions = []
+    max_cpu_usage = []
+    second_max_cpu_usage = []
+
+    # Daten aus der CSV-Datei einlesen
+    with open(csv_file_path, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            repetitions.append(int(row['Repetition']))
+            max_cpu_usage.append(float(row['Max_CPU_Usage_us']))
+            second_max_cpu_usage.append(float(row['Second_Max_CPU_Usage_us']))
+
+    # Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, max_cpu_usage, label='CPU Usage (us)', marker='o')
+    plt.scatter(repetitions, second_max_cpu_usage, label='CPU Usage (us) parallelized', marker='x')
+
+    # Plot anpassen
+    plt.title('CPU Usage Elliptic curves Comparison')
+    plt.xlabel('Repetition')
+    plt.ylabel('CPU Usage (us)')
+    plt.legend()
+    plt.grid(True)
+
+    # Plot anzeigen
+    plt.tight_layout()
+    plt.show()
 
 
 def plot_RAM_LWE128():
-    pass
+    csv_file = f'results/lwe128_ram_usage_parallel.csv'
+
+    # Daten aus der CSV-Datei lesen
+    repetitions = []
+    ram_usage_file1 = []
+    ram_usage_file2 = []
+
+    with open(csv_file, "r") as file:
+        reader = csv.reader(file)
+        next(reader)  # Überspringe die Kopfzeile
+        for row in reader:
+            repetitions.append(int(row[0]))
+            ram_usage_file1.append(int(row[1]))
+            ram_usage_file2.append(int(row[2]))
+
+    # Scatter-Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, ram_usage_file1, color="blue", label="RAM Usage (MB)", marker="o")
+    plt.scatter(repetitions, ram_usage_file2, color="red", label="RAM Usage (MB) Parallelized", marker="o")
+
+    # Achsenbeschriftungen und Titel
+    plt.xlabel("Repetition")
+    plt.ylabel("RAM Usage (MB)")
+    plt.title("RAM Usage per Repetition")
+    plt.legend()
+
+    # Diagramm anzeigen
+    plt.grid(True)
+    plt.show()
 
 
 def plot_Exec_LWE128():
-    pass
+    # Pfad zur CSV-Datei
+    csv_file = f'results/lwe128_execution_time.csv'
+
+    # Daten aus der CSV-Datei lesen
+    repetitions = []
+    execution_time_1 = []
+    execution_time_2 = []
+
+    with open(csv_file, "r") as file:
+        reader = csv.reader(file)
+        next(reader)  # Überspringe die Kopfzeile
+        for row in reader:
+            repetitions.append(int(row[0]))
+            execution_time_1.append(float(row[1]))
+            execution_time_2.append(float(row[2]))
+
+    # Scatter-Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, execution_time_1, color="blue", label="Execution_Time", marker="o")
+    plt.scatter(repetitions, execution_time_2, color="red", label="Execution_Time_Parallelized", marker="o")
+
+    # Achsenbeschriftungen und Titel
+    plt.xlabel("Repetition")
+    plt.ylabel("Execution Time (ms)")
+    plt.title("Execution Time per Repetition LWE128")
+    plt.legend()
+
+    # Diagramm anzeigen
+    plt.grid(True)
+    plt.show()
 
 
 def plot_CPU_merkle():
-    pass
+    csv_file_path = 'results/CPU_usage_merkle.csv'
+    repetitions = []
+    max_cpu_usage = []
+    second_max_cpu_usage = []
+
+    # Daten aus der CSV-Datei einlesen
+    with open(csv_file_path, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            repetitions.append(int(row['Repetition']))
+            max_cpu_usage.append(float(row['Max_CPU_Usage_us']))
+            second_max_cpu_usage.append(float(row['Second_Max_CPU_Usage_us']))
+
+    # Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, max_cpu_usage, label='CPU Usage (us)', marker='o')
+    plt.scatter(repetitions, second_max_cpu_usage, label='CPU Usage (us) parallelized', marker='x')
+
+    # Plot anpassen
+    plt.title('CPU Usage Elliptic curves Comparison')
+    plt.xlabel('Repetition')
+    plt.ylabel('CPU Usage (us)')
+    plt.legend()
+    plt.grid(True)
+
+    # Plot anzeigen
+    plt.tight_layout()
+    plt.show()
 
 
 def plot_RAM_merkle():
@@ -411,7 +690,36 @@ def plot_RAM_merkle():
 
 
 def plot_Exec_merkle():
-    pass
+    # Pfad zur CSV-Datei
+    csv_file = f'results/merkle_execution_time.csv'
+
+    # Daten aus der CSV-Datei lesen
+    repetitions = []
+    execution_time_1 = []
+    execution_time_2 = []
+
+    with open(csv_file, "r") as file:
+        reader = csv.reader(file)
+        next(reader)  # Überspringe die Kopfzeile
+        for row in reader:
+            repetitions.append(int(row[0]))
+            execution_time_1.append(float(row[1]))
+            execution_time_2.append(float(row[2]))
+
+    # Scatter-Plot erstellen
+    plt.figure(figsize=(10, 6))
+    plt.scatter(repetitions, execution_time_1, color="blue", label="Execution_Time", marker="o")
+    plt.scatter(repetitions, execution_time_2, color="red", label="Execution_Time_Parallelized", marker="o")
+
+    # Achsenbeschriftungen und Titel
+    plt.xlabel("Repetition")
+    plt.ylabel("Execution Time (ms)")
+    plt.title("Execution Time per Repetition for merkle tree")
+    plt.legend()
+
+    # Diagramm anzeigen
+    plt.grid(True)
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -434,7 +742,7 @@ if __name__ == '__main__':
     if folder_key == "singlePerformance":
         list = {"lwe128", "lwe", "elliptic"}
         for key in list:
-            clean_CPU_data(key, True, folder_key)
+            #clean_CPU_data(key, True, folder_key)
             sort_CPU_usage(key, folder_key)
             clean_CPU_data(key, False, folder_key)
             merge_CPU_Usage(key, folder_key)
@@ -448,7 +756,7 @@ if __name__ == '__main__':
             #merge_CPU_Usage(None, folder_key)
             #clean_Exec_data(None, folder_key)
             sort_ram_usage(None, folder_key)
-            #clean_RAM_data(None, folder_key)
+            clean_RAM_data(None, folder_key)
 
 
 
